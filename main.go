@@ -156,25 +156,28 @@ func scan(ctx context.Context, srcBucket string, sample int, matcher, handler fu
 	totalSize := int64(0)
 
 	i := 0
+	matchIndex := int64(0)
+
 	params := &s3.ListObjectsInput{Bucket: aws.String(srcBucket)}
 	err := s3client.ListObjectsPagesWithContext(ctx, params, func(output *s3.ListObjectsOutput, end bool) bool {
 		for _, obj := range output.Contents {
 			if matcher(obj) {
-				handler(obj)
-
 				if sample == 1 {
-					sampleOutput(obj, total)
+					sampleOutput(obj, matchIndex)
+					matchIndex++
 				}
+
+				handler(obj)
 			}
 
 			total++
 			totalSize += *obj.Size
 		}
-		i++
 
 		if end {
 			return false
 		}
+		i++
 		return i < *pageLen
 	})
 
