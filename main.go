@@ -72,7 +72,8 @@ func main() {
 				Key:        obj.Key,
 			})
 			if err != nil {
-				logger.Fatalf("CopyObject err: %v\n", err)
+				logger.Printf("CopyObject: %v, err: %v\n", *obj.Key, err)
+				return true //skip the file
 			}
 
 			_, err = s3client.DeleteObject(&s3.DeleteObjectInput{
