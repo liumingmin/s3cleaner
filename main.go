@@ -66,17 +66,20 @@ func main() {
 			matchFileCount++
 			matchfilesize += *obj.Size
 
-			_, err := s3client.CopyObject(&s3.CopyObjectInput{
-				CopySource: aws.String(fmt.Sprintf("%s/%s", s3Bucket, *obj.Key)),
-				Bucket:     aws.String(s3CopyBucket),
-				Key:        obj.Key,
-			})
-			if err != nil {
-				logger.Printf("CopyObject: %v, err: %v\n", *obj.Key, err)
-				return true //skip the file
+			objName := strings.ToLower(*obj.Key)
+			if !strings.HasSuffix(objName, ".mp4") {
+				_, err := s3client.CopyObject(&s3.CopyObjectInput{
+					CopySource: aws.String(fmt.Sprintf("%s/%s", s3Bucket, *obj.Key)),
+					Bucket:     aws.String(s3CopyBucket),
+					Key:        obj.Key,
+				})
+				if err != nil {
+					logger.Printf("CopyObject: %v, err: %v\n", *obj.Key, err)
+					return true //skip the file
+				}
 			}
 
-			_, err = s3client.DeleteObject(&s3.DeleteObjectInput{
+			_, err := s3client.DeleteObject(&s3.DeleteObjectInput{
 				Bucket: aws.String(s3Bucket),
 				Key:    obj.Key,
 			})
