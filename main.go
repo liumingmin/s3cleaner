@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"hash/crc32"
 	"log"
 	"os"
 	"strconv"
@@ -41,11 +42,15 @@ var pageLen = flag.Int("page", 1, "scan max page len")
 var expday = flag.Int("expday", 365*4, "day of expire")
 var sample = flag.Int("sample", 1, "if 1 then sample")
 
+var hashn = flag.Uint("hashn", 10, "hash num")
+var hashi = flag.Uint("hashi", 0, "hash index")
+
 func main() {
 	flag.Parse()
 	ctx := context.Background()
 
-	fmt.Println(fmt.Sprintf("options: mode: %v, page: %v, expireday: %v, sample: %v", *mode, *pageLen, *expday, *sample))
+	fmt.Println(fmt.Sprintf("options: mode: %v, page: %v, expireday: %v, sample: %v, hashn: %v, hashi: %v",
+		*mode, *pageLen, *expday, *sample, *hashn, *hashi))
 
 	s3client = initS3Client()
 	initSample()
@@ -67,6 +72,11 @@ func main() {
 			matchfilesize += *obj.Size
 
 			objName := strings.ToLower(*obj.Key)
+			crc32 := uint(crc32.ChecksumIEEE([]byte(objName)))
+			if crc32%(*hashn) != (*hashi) {
+				return true
+			}
+
 			if !strings.HasSuffix(objName, ".mp4") {
 				_, err := s3client.CopyObject(&s3.CopyObjectInput{
 					CopySource: aws.String(fmt.Sprintf("%s/%s", s3Bucket, *obj.Key)),
@@ -205,7 +215,7 @@ func initS3Client() *s3.S3 {
 }
 
 func sampleOutput(obj *s3.Object, index int64) {
-	hashBase := uint32(*pageLen) / 10
+	hashBase := uint32(*pageLen) / 1000
 	if hashBase < 2 {
 		hashBase = 2
 	}
